@@ -17,8 +17,18 @@ def layerToSide(layer):
         return "B"
     raise RuntimeError(f"Got component with invalid layer {layer}")
 
+def moduleX(module, placeOffset):
+    pos = module.GetPosition() - placeOffset
+    if module.GetLayer() == pcbnew.B_Cu:
+        return -toMm(pos[0])
+    return toMm(pos[0])
+
+def moduleY(module, placeOffset):
+    return -toMm((module.GetPosition() - placeOffset)[1])
+
 def collectPosData(board, forceSmd):
     modules = []
+    placeOffset = board.GetDesignSettings().m_AuxOrigin
     for module in board.GetModules():
         if module.GetAttributes() & MODULE_ATTR_T.MOD_VIRTUAL:
             continue
@@ -26,8 +36,8 @@ def collectPosData(board, forceSmd):
         if module.GetAttributes() & MODULE_ATTR_T.MOD_CMS or (forceSmd and not hasNonSMDPins(module)):
             modules.append(module)
     return [(module.GetReference(),
-             (-1 if module.GetLayer() == pcbnew.B_Cu else 1) * toMm(module.GetPosition()[0]),
-             -toMm(module.GetPosition()[1]),
+             moduleX(module, placeOffset),
+             moduleY(module, placeOffset),
              layerToSide(module.GetLayer()),
              module.GetOrientation() / 10) for module in modules]
 
