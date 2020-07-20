@@ -41,18 +41,18 @@ def collectPosData(board, forceSmd):
              layerToSide(module.GetLayer()),
              module.GetOrientation() / 10) for module in modules]
 
-def collectBom(components):
+def collectBom(components, lscsField):
     bom = {}
     for c in components:
-        reference = getField(c, "Reference")
-        if reference.startswith("#PWR") or reference.startswith("#FL"):
-            continue
-        cType = (
-            getField(c, "Value"),
-            getField(c, "Footprint"),
-            getField(c, "LCSC")
-        )
-        bom[cType] = bom.get(cType, []) + [reference]
+        for reference in c["reference"]:
+            if reference.startswith("#PWR") or reference.startswith("#FL"):
+                continue
+            cType = (
+                getField(c, "Value"),
+                getField(c, "Footprint"),
+                getField(c, lscsField)
+            )
+            bom[cType] = bom.get(cType, []) + [reference]
     return bom
 
 def posDataToFile(posData, filename):
@@ -77,7 +77,8 @@ def bomToCsv(bomData, filename):
 @click.option("--schematic", type=click.Path(dir_okay=False), help="Board schematics (required for assembly files)")
 @click.option("--forceSMD", is_flag=True, help="Force include all components having only SMD pads")
 @click.option("--ignore", type=str, default="", help="Comma separated list of designators to exclude from SMT assembly")
-def jlcpcb(board, outputdir, assembly, schematic, forcesmd, ignore):
+@click.option("--field", type=str, default="LSCS", help="Name of component field with LSCS order code")
+def jlcpcb(board, outputdir, assembly, schematic, forcesmd, ignore, field):
     """
     Prepare fabrication files for JLCPCB including their assembly service
     """
@@ -97,4 +98,4 @@ def jlcpcb(board, outputdir, assembly, schematic, forcesmd, ignore):
         raise RuntimeError("When outputing assembly data, schematic is required")
     components = extractComponents(schematic)
     posDataToFile(collectPosData(loadedBoard, forcesmd), os.path.join(outputdir, "pos.csv"))
-    bomToCsv(collectBom(components), os.path.join(outputdir, "bom.csv"))
+    bomToCsv(collectBom(components, field), os.path.join(outputdir, "bom.csv"))

@@ -1,6 +1,8 @@
-# Simple, rather hacky parser for eeshema files (.sch)
+# Simple, rather hacky parser for eeshema files (.sch). This is a mid-term
+# workaround before proper support for scripting is introduced into Eeschema
 
 import shlex
+import os
 
 class EeschemaException(Exception):
     pass
@@ -66,7 +68,9 @@ def readHeader(file):
             raise EeschemaException(f"Unexpected line: '{line}'")
 
 def readComponent(file):
-    component = {}
+    component = {
+        "reference": set()
+    }
     while True:
         line = readEeschemaLine(file)
         if line == "$EndComp":
@@ -74,8 +78,8 @@ def readComponent(file):
 
         if line.startswith("L"):
             items = line.split()
-            component["reference"] = items[1]
-            component["name"] = items[0]
+            component["reference"].add(items[2])
+            component["name"] = items[1]
         elif line.startswith("U"):
             component["u"] = line.split()[1:]
         elif line.startswith("P"):
@@ -96,6 +100,13 @@ def readComponent(file):
             if field["number"] >= 4:
                 field["name"] = items[10]
             component["fields"] = component.get("fields", []) + [field]
+        elif line.startswith("AR"):
+            # Hierarchical sheet reference. We assume all sheets are used within
+            # the project, therefore we do not check validity of path
+            items = shlex.split(line)
+            for item in items:
+                if item.startswith('Ref='):
+                    component["reference"].add(item[len('Ref='):])
         else:
             items = shlex.split(line)
             try:
@@ -108,18 +119,43 @@ def readComponent(file):
             except ValueError:
                 raise EeschemaException(f"Unexpected line: '{line}'")
 
-def extractComponents(filename):
+def readSheet(file):
+    # Note that the parser is incomplete an only extracts filename from the
+    # sheet as currently it is all we need
+    sheet = {}
+    while True:
+        line = readEeschemaLine(file)
+        if line == "$EndSheet":
+            return sheet
+        if line.startswith("F1"):
+            items = shlex.split(line)
+            sheet["F1"] = items[1]
+
+def extractComponents(filename, visitedSheets=None):
     """
     Extract all components from the schematics
     """
+    if visitedSheets is None:
+        visitedSheets = set()
     components = []
+    sheets = []
     with open(filename, "r", encoding="utf-8") as file:
         header = readHeader(file)
         while True:
             line = file.readline()
             if not line:
-                return components
+                break
             line = line.strip()
             if line.startswith("$Comp"):
                 components.append(readComponent(file))
+            if line.startswith("$Sheet"):
+                sheets.append(readSheet(file))
+    for s in sheets:
+        dirname = os.path.dirname(filename)
+        sheetfilename = os.path.join(dirname, s["F1"])
+        if sheetfilename in visitedSheets:
+            continue
+        visitedSheets.add(sheetfilename)
+        components += extractComponents(sheetfilename, visitedSheets)
+    return components
 
