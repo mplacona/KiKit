@@ -67,8 +67,8 @@ def bomToCsv(bomData, filename):
         writer = csv.writer(csvfile)
         writer.writerow(["Comment", "Designator", "Footprint", "LCSC"])
         for cType, references in bomData.items():
-            value, footprint, lscs = cType
-            writer.writerow([value, ",".join(references), footprint, lscs])
+            value, footprint, lcsc = cType
+            writer.writerow([value, ",".join(references), footprint, lcsc])
 
 @click.command()
 @click.argument("board", type=click.Path(dir_okay=False))
