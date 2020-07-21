@@ -44,15 +44,15 @@ def collectPosData(board, forceSmd):
 def collectBom(components, lscsField):
     bom = {}
     for c in components:
-        for reference in c["reference"]:
-            if reference.startswith("#PWR") or reference.startswith("#FL"):
-                continue
-            cType = (
-                getField(c, "Value"),
-                getField(c, "Footprint"),
-                getField(c, lscsField)
-            )
-            bom[cType] = bom.get(cType, []) + [reference]
+        reference = c["reference"]
+        if reference.startswith("#PWR") or reference.startswith("#FL"):
+            continue
+        cType = (
+            getField(c, "Value"),
+            getField(c, "Footprint"),
+            getField(c, lscsField)
+        )
+        bom[cType] = bom.get(cType, []) + [reference]
     return bom
 
 def posDataToFile(posData, filename):

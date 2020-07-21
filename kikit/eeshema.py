@@ -67,10 +67,8 @@ def readHeader(file):
         else:
             raise EeschemaException(f"Unexpected line: '{line}'")
 
-def readComponent(file):
-    component = {
-        "reference": set()
-    }
+def readComponent(file, sheetPath=""):
+    component = {}
     while True:
         line = readEeschemaLine(file)
         if line == "$EndComp":
@@ -78,10 +76,10 @@ def readComponent(file):
 
         if line.startswith("L"):
             items = line.split()
-            component["reference"].add(items[2])
+            component["reference"] = items[2]
             component["name"] = items[1]
         elif line.startswith("U"):
-            component["u"] = line.split()[1:]
+            component["u"] = line.split()[3]
         elif line.startswith("P"):
             items = line.split()
             component["position"] = (int(items[1]), int(items[2]))
@@ -104,9 +102,20 @@ def readComponent(file):
             # Hierarchical sheet reference. We assume all sheets are used within
             # the project, therefore we do not check validity of path
             items = shlex.split(line)
+            path = None
+            ref = None
+            for item in items:
+                if item.startswith('Path='):
+                    path = item[len('Path='):]
+                    break
             for item in items:
                 if item.startswith('Ref='):
-                    component["reference"].add(item[len('Ref='):])
+                    ref = item[len('Ref='):]
+                    break
+            if path is not None and ref is not None:
+                compPath = sheetPath + "/" + component["u"]
+                if path == compPath:
+                    component["reference"] = ref
         else:
             items = shlex.split(line)
             try:
@@ -120,8 +129,8 @@ def readComponent(file):
                 raise EeschemaException(f"Unexpected line: '{line}'")
 
 def readSheet(file):
-    # Note that the parser is incomplete an only extracts filename from the
-    # sheet as currently it is all we need
+    # Note that the parser is incomplete an only extracts filename and reference
+    # from the sheet as it is all we need currently
     sheet = {}
     while True:
         line = readEeschemaLine(file)
@@ -129,14 +138,14 @@ def readSheet(file):
             return sheet
         if line.startswith("F1 "):
             items = shlex.split(line)
-            sheet["F1"] = items[1]
+            sheet["f1"] = items[1]
+        elif line.startswith("U "):
+            sheet["u"] = line.split()[1]
 
-def extractComponents(filename, visitedSheets=None):
+def extractComponents(filename, path=""):
     """
     Extract all components from the schematics
     """
-    if visitedSheets is None:
-        visitedSheets = set()
     components = []
     sheets = []
     with open(filename, "r", encoding="utf-8") as file:
@@ -147,14 +156,11 @@ def extractComponents(filename, visitedSheets=None):
                 break
             line = line.strip()
             if line.startswith("$Comp"):
-                components.append(readComponent(file))
+                components.append(readComponent(file, path))
             if line.startswith("$Sheet"):
                 sheets.append(readSheet(file))
     for s in sheets:
         dirname = os.path.dirname(filename)
-        sheetfilename = os.path.join(dirname, s["F1"])
-        if sheetfilename in visitedSheets:
-            continue
-        visitedSheets.add(sheetfilename)
-        components += extractComponents(sheetfilename, visitedSheets)
+        sheetfilename = os.path.join(dirname, s["f1"])
+        components += extractComponents(sheetfilename, path + "/" + s["u"])
     return components
