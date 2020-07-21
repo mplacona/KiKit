@@ -77,7 +77,7 @@ def bomToCsv(bomData, filename):
 @click.option("--schematic", type=click.Path(dir_okay=False), help="Board schematics (required for assembly files)")
 @click.option("--forceSMD", is_flag=True, help="Force include all components having only SMD pads")
 @click.option("--ignore", type=str, default="", help="Comma separated list of designators to exclude from SMT assembly")
-@click.option("--field", type=str, default="LSCS", help="Name of component field with LSCS order code")
+@click.option("--field", type=str, default="LCSC", help="Name of component field with LCSC order code")
 def jlcpcb(board, outputdir, assembly, schematic, forcesmd, ignore, field):
     """
     Prepare fabrication files for JLCPCB including their assembly service
