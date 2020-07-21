@@ -79,7 +79,9 @@ def readComponent(file, sheetPath=""):
             component["reference"] = items[2]
             component["name"] = items[1]
         elif line.startswith("U"):
-            component["u"] = line.split()[3]
+            items = line.split()
+            component["u"] = items[3]
+            component["unit"] = int(items[1])
         elif line.startswith("P"):
             items = line.split()
             component["position"] = (int(items[1]), int(items[2]))

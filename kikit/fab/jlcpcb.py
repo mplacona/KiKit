@@ -44,6 +44,8 @@ def collectPosData(board, forceSmd):
 def collectBom(components, lscsField):
     bom = {}
     for c in components:
+        if c["unit"] != 1:
+            continue
         reference = c["reference"]
         if reference.startswith("#PWR") or reference.startswith("#FL"):
             continue
