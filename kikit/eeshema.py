@@ -127,7 +127,7 @@ def readSheet(file):
         line = readEeschemaLine(file)
         if line == "$EndSheet":
             return sheet
-        if line.startswith("F1"):
+        if line.startswith("F1 "):
             items = shlex.split(line)
             sheet["F1"] = items[1]
 
@@ -158,4 +158,3 @@ def extractComponents(filename, visitedSheets=None):
         visitedSheets.add(sheetfilename)
         components += extractComponents(sheetfilename, visitedSheets)
     return components
-
